@@ -1,38 +1,3 @@
-"""
-=============================================
-Comparison of kernel ridge regression and SVR
-=============================================
-
-Both kernel ridge regression (KRR) and SVR learn a non-linear function by
-employing the kernel trick, i.e., they learn a linear function in the space
-induced by the respective kernel which corresponds to a non-linear function in
-the original space. They differ in the loss functions (ridge versus
-epsilon-insensitive loss). In contrast to SVR, fitting a KRR can be done in
-closed-form and is typically faster for medium-sized datasets. On the other
-hand, the learned model is non-sparse and thus slower than SVR at
-prediction-time.
-
-This example illustrates both methods on an artificial dataset, which
-consists of a sinusoidal target function and strong noise added to every fifth
-datapoint. The first figure compares the learned model of KRR and SVR when both
-complexity/regularization and bandwidth of the RBF kernel are optimized using
-grid-search. The learned functions are very similar; however, fitting KRR is
-approx. seven times faster than fitting SVR (both with grid-search). However,
-prediction of 100000 target values is more than tree times faster with SVR
-since it has learned a sparse model using only approx. 1/3 of the 100 training
-datapoints as support vectors.
-
-The next figure compares the time for fitting and prediction of KRR and SVR for
-different sizes of the training set. Fitting KRR is faster than SVR for medium-
-sized training sets (less than 1000 samples); however, for larger training sets
-SVR scales better. With regard to prediction time, SVR is faster than
-KRR for all sizes of the training set because of the learned sparse
-solution. Note that the degree of sparsity and thus the prediction time depends
-on the parameters epsilon and C of the SVR.
-"""
-
-# Authors: Jan Hendrik Metzen <jhm@informatik.uni-bremen.de>
-# License: BSD 3 clause
 
 
 from __future__ import division
@@ -53,6 +18,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn import cross_validation
+from sklearn.feature_selection import SelectFromModel
 import pandas as pd
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier
@@ -118,18 +84,21 @@ train_size = 900
 degrees = 2
 a = [100]
 
-polynomial_features = PolynomialFeatures(degree=degrees,
-                          include_bias=True)
-kernel = KernelRidge(kernel='rbf', gamma=0.01,alpha=0.001)
-kr = Pipeline([("polynomial_features", polynomial_features),
+clf = Ridge(alpha=a[0], copy_X=True, fit_intercept=True, max_iter=None,
+            normalize=False,  solver='auto', tol=0.001)
+kernel = KernelRidge(kernel='rbf', gamma=0.01, alpha=0.001)
+sfm = SelectFromModel(clf, prefit=False)
+krfs = Pipeline([("feature_selection", sfm),
         ("KernelRidge", kernel)])
 
 t0 = time.time()
-kr.fit(X, y)
-kr_fit = time.time() - t0
+
+krfs.fit(X, y)
+
+krfs_fit = time.time() - t0
 print("KRR complexity and bandwidth selected and model fitted in %.3f s"
-      % kr_fit)
-eval_pred(kr, X, y, K=3)
+      % krfs_fit)
+eval_pred(krfs, X, y, K=3)
 
 
 # sub = pd.read_csv("sample.csv")
