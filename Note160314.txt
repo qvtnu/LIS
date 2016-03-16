@@ -1,0 +1,4 @@
+by zht 9:55 pm
+check the variance and mean are all similar to 1.00
+
+
